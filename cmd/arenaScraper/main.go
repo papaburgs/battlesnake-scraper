@@ -59,7 +59,7 @@ func main() {
 				recent := scraper.GetRecentGames(snake.SAIID)
 				for _, r := range recent {
 					if !kvstore.RecentExist(r.GameID) {
-						err = kvstore.AddRecentGame(response2record(r))
+						err = kvstore.AddRecentGame(response2record(r, arena))
 						if err == nil {
 							log.Printf("Added game %s", r.GameID)
 						} else {
@@ -92,7 +92,7 @@ func main() {
 	}
 }
 
-func response2record(s scraper.RecentGame) splunkkvstore.RecentRecord {
+func response2record(s scraper.RecentGame, arena string) splunkkvstore.RecentRecord {
 	c := splunkkvstore.RecentRecord{
 		GameID:      s.GameID,
 		SnakeSAIID:  s.SnakeID,
@@ -101,6 +101,7 @@ func response2record(s scraper.RecentGame) splunkkvstore.RecentRecord {
 		PointChange: s.PointChange,
 		TierChange:  s.TierChange,
 		Result:      s.Result,
+		Arena:       arena,
 	}
 	return c
 }

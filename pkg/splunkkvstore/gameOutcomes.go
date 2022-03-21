@@ -40,7 +40,6 @@ func (k KVStore) OutcomeExist(gameID string) bool {
 		log.Println(err)
 		return false
 	}
-	fmt.Println(len(output))
 	return len(output) > 0
 }
 

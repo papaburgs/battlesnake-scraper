@@ -18,6 +18,7 @@ type RecentRecord struct {
 	PointChange string
 	TierChange  string
 	Result      string
+	Arena       string
 }
 
 const (
