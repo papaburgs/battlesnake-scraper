@@ -32,11 +32,13 @@ var gitCommit string
 
 func main() {
 	var (
-		//snakes  []scraper.ArenaSnake
-		kvstore *splunkkvstore.KVStore
+		snakes      []scraper.ArenaSnake
+		kvstore     *splunkkvstore.KVStore
+		err         error
+		configArray []string
 	)
-	configArray := strings.Split(configContents, "\n")
 	log.Printf("starting scraper version: %s", gitCommit)
+	configArray = strings.Split(configContents, "\n")
 	kvstore = splunkkvstore.NewKVStore(
 		configArray[0], // host
 		configArray[1], // port
@@ -44,45 +46,50 @@ func main() {
 		configArray[3], // app
 		"nobody",       //user
 	)
+	arenas := []string{"global-wrapped"}
+	for _, arena := range arenas {
+		log.Print("Scraping")
+		snakes = scraper.Scrape(arena)
 
-	exists := kvstore.RecentExist("f3f3de63-bf57-4093-91b5-fcf84dd3f329")
-	if exists {
-		log.Print("exists")
-	} else {
-		log.Print("no exist")
-	}
-	//	log.Print("Scraping")
-	//snakes = scraper.Scrape("spring-league-2022")
+		beNice(10000)
+		for _, snake := range snakes {
+			if snake.Name == "Mollywobbles" {
+				beNice(10000)
+				log.Print("getting recent games")
+				recent := scraper.GetRecentGames(snake.SAIID)
+				for _, r := range recent {
+					if !kvstore.RecentExist(r.GameID) {
+						err = kvstore.AddRecentGame(response2record(r))
+						if err == nil {
+							log.Printf("Added game %s", r.GameID)
+						} else {
+							log.Println(err)
+						}
+					} else {
+						log.Printf("Game %s already exists", r.GameID)
+					}
 
-	//beNice(10000)
-	//	for _, snake := range snakes {
-	//		if snake.Name == "Mollywobbles" {
-	//		beNice(10000)
-	//			log.Print("getting recent games")
-	//		recent := scraper.GetRecentGames(snake.SAIID)
-	//		fmt.Println(recent[1])
-	//			log.Println("trying to add game")
-	/*
-		err = kvstore.AddRecentGame(response2record(recent[1]))
-		if err != nil {
-			log.Println(err)
+					if !kvstore.OutcomeExist(r.GameID) {
+						beNice(10000)
+						gameInfo := scraper.GetLastFrame(r.GameID)
+						snakeOutcomes := gameInfo2splunk(gameInfo)
+						for _, snakeOutcome := range snakeOutcomes {
+							err = kvstore.AddOutcomeGame(snakeOutcome)
+							if err == nil {
+								log.Printf("Added game %s", r.GameID)
+							} else {
+								log.Println(err)
+							}
+						}
+					} else {
+						log.Printf("Game %s already exists", r.GameID)
+					}
+
+				}
+			}
 		}
-	*/
-	//		games := kvstore.GetAllRecentGames()
-	//		fmt.Println(games)
 
-	// beNice(10000)
-	// fmt.Println("getting last frame")
-	// fmt.Println(scraper.GetLastFrame(recent[1].GameID))
-	//		}
-	//	}
-}
-
-func beNice(ms int) {
-	// set random number of milliseconds
-	rand.Seed(time.Now().Unix())
-	rms := rand.Intn(ms)
-	time.Sleep(time.Duration(rms) * time.Millisecond)
+	}
 }
 
 func response2record(s scraper.RecentGame) splunkkvstore.RecentRecord {
@@ -96,4 +103,31 @@ func response2record(s scraper.RecentGame) splunkkvstore.RecentRecord {
 		Result:      s.Result,
 	}
 	return c
+}
+
+func gameInfo2splunk(g scraper.GameInfo) []splunkkvstore.GameOutcomeRecord {
+	var or []splunkkvstore.GameOutcomeRecord
+	var r splunkkvstore.GameOutcomeRecord
+	or = []splunkkvstore.GameOutcomeRecord{}
+
+	for _, snake := range g.LastFrame.Snakes {
+		r = splunkkvstore.GameOutcomeRecord{
+			GameID:     g.Game.ID,
+			SnakeGSID:  snake.ID,
+			Name:       snake.Name,
+			DeathCause: snake.Death.Cause,
+			DeathTurn:  snake.Death.Turn,
+			DeathFrom:  snake.Death.EliminatedBy,
+		}
+		or = append(or, r)
+	}
+
+	return or
+}
+
+func beNice(ms int) {
+	// set random number of milliseconds
+	rand.Seed(time.Now().Unix())
+	rms := rand.Intn(ms)
+	time.Sleep(time.Duration(rms) * time.Millisecond)
 }

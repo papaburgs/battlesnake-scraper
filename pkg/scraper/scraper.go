@@ -3,6 +3,7 @@ package scraper
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -78,6 +79,7 @@ func GetLastFrame(gid string) GameInfo {
 		httpClient *http.Client
 		resp       *http.Response
 		gameInfo   GameInfo
+		payload    []byte
 	)
 	if len(gid) == 0 {
 		log.Print("No GID provided")
@@ -91,11 +93,16 @@ func GetLastFrame(gid string) GameInfo {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&gameInfo)
-	if err != nil {
-		log.Fatal(err)
+	if payload, err = io.ReadAll(resp.Body); err != nil {
+		log.Printf("ERROR: Failed to read body, %s", err)
+		return gameInfo
 	}
+
+	if err = json.Unmarshal(payload, &gameInfo); err != nil {
+		log.Printf("ERROR: Failed to decode start json, %s", err)
+		return gameInfo
+	}
+
 	return gameInfo
 
 }

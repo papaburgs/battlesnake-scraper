@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	collect_outcomes = "gameOutcomes"
+	collect_outcomes = "gameOutcome"
 )
 
 // GameOutcomeRecord is based off the 'engine' endpoint and

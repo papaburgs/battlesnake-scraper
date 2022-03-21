@@ -21,7 +21,7 @@ const (
 	collect_snakeID = "snakeID"
 )
 
-func (k KVStore) SAIIDExist(s string) bool {
+func (k KVStore) GetSnake(s string) []SnakeRecord {
 	var (
 		err     error
 		address string
@@ -30,17 +30,18 @@ func (k KVStore) SAIIDExist(s string) bool {
 		output []SnakeRecord
 	)
 
-	// fields = "game_id,result"
 	query = fmt.Sprintf("{\"SnakeSAIID\": \"%s\"}", s)
 	address = fmt.Sprintf("%s/%s?query=%s",
 		k.base, collect_snakeID, url.QueryEscape(query))
 	err = k.Get(address, &output)
 	if err != nil {
 		log.Println(err)
-		return false
 	}
-	fmt.Println(len(output))
-	return len(output) > 0
+	return output
+}
+
+func (k KVStore) SAIIDExist(s string) bool {
+	return len(k.GetSnake(s)) > 0
 }
 
 func (k KVStore) GetAllSnakes() []SnakeRecord {
